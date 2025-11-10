@@ -9,6 +9,16 @@
       <el-form-item label="名称">
         <el-input v-model="form.label" placeholder="请输入学习方向名称" />
       </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="form.type" placeholder="请选择所属转盘">
+          <el-option
+            v-for="option in typeOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="简介">
         <el-input
           v-model="form.description"
@@ -85,9 +95,14 @@ export default {
         id: '',
         label: '',
         description: '',
+        type: 'learning',
         selected: false,
         resources: []
-      }
+      },
+      typeOptions: [
+        { label: '项目方向转盘', value: 'project' },
+        { label: '学习技能转盘', value: 'learning' }
+      ]
     };
   },
   watch: {
@@ -133,6 +148,10 @@ export default {
         this.$message.warning('请填写学习方向名称');
         return;
       }
+      if (!this.form.type) {
+        this.$message.warning('请选择所属转盘');
+        return;
+      }
       // 仅保留填写完整的资源条目，并确保每条都有完成状态
       const resources = this.form.resources
         .filter((item) => item.title && item.link)
@@ -151,6 +170,7 @@ export default {
     normalizeForm(payload) {
       const cloned = JSON.parse(JSON.stringify(payload));
       cloned.selected = Boolean(cloned.selected);
+      cloned.type = cloned.type || 'learning';
       cloned.resources = (cloned.resources || []).map((item) => ({
         ...item,
         completed: Boolean(item.completed)
@@ -164,6 +184,10 @@ export default {
 <style lang="less" scoped>
 .resource-form {
   margin-bottom: 16px;
+
+  :deep(.el-select) {
+    width: 100%;
+  }
 }
 
 .status-alert {

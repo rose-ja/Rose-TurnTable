@@ -24,7 +24,7 @@ export const localStoragePlugin = (store) => {
     try {
       const serialized = JSON.stringify({
         categories: state.categories,
-        currentCategoryId: state.currentCategoryId
+        currentCategoryIds: state.currentCategoryIds
       });
       window.localStorage.setItem(STORAGE_KEY, serialized);
     } catch (error) {

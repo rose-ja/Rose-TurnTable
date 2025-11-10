@@ -2,10 +2,20 @@
   <el-card class="stats-panel" shadow="never">
     <div class="panel-head">
       <div class="title">学习概览</div>
-      <el-tag type="success" effect="dark" v-if="statistics.currentLabel">
-        当前重点方向：{{ statistics.currentLabel }}
-      </el-tag>
-      <el-tag v-else type="info">当前暂无选中方向</el-tag>
+      <div class="tag-group">
+        <el-tag
+          effect="dark"
+          :type="statistics.currentProjectLabel ? 'success' : 'info'"
+        >
+          项目转盘：{{ statistics.currentProjectLabel || '未选中' }}
+        </el-tag>
+        <el-tag
+          effect="dark"
+          :type="statistics.currentLearningLabel ? 'warning' : 'info'"
+        >
+          学习转盘：{{ statistics.currentLearningLabel || '未选中' }}
+        </el-tag>
+      </div>
     </div>
     <el-row :gutter="16">
       <el-col :xs="12" :sm="6">
@@ -36,6 +46,10 @@ export default {
     categories: {
       type: Array,
       default: () => []
+    },
+    currentIds: {
+      type: Object,
+      default: () => ({})
     }
   },
   computed: {
@@ -48,13 +62,21 @@ export default {
         (total, item) => total + (item.resources?.filter((resource) => resource.completed).length || 0),
         0
       );
-      const current = this.categories.find((item) => item.selected);
+      const projectCategories = this.categories.filter((item) => item.type === 'project');
+      const learningCategories = this.categories.filter((item) => item.type !== 'project');
+      const currentProject = projectCategories.find(
+        (item) => item.id === this.currentIds?.project || item.selected
+      );
+      const currentLearning = learningCategories.find(
+        (item) => item.id === this.currentIds?.learning || item.selected
+      );
       return {
         categoryCount,
         resourceCount,
         customCategoryCount,
         completedResources,
-        currentLabel: current?.label || ''
+        currentProjectLabel: currentProject?.label || '',
+        currentLearningLabel: currentLearning?.label || ''
       };
     }
   }
@@ -72,6 +94,7 @@ export default {
   .panel-head {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 16px;
 
@@ -79,6 +102,13 @@ export default {
       font-weight: 600;
       font-size: 16px;
       color: #303133;
+    }
+
+    .tag-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
   }
 }

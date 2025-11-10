@@ -1,22 +1,42 @@
 <template>
   <div class="app-container">
-    <app-header :spinning="spinning" @spin="handleSpin" />
+    <app-header />
 
     <div class="content-grid">
       <turntable
         class="turntable"
-        :categories="categories"
-        :spinning="spinning"
-        :selected-id="selectedId"
-        @update:selectedId="selectedId = $event"
-        @spin-end="handleSpinEnd"
+        title="项目方向转盘"
+        center-label="项目"
+        :categories="projectCategories"
+        :spinning="spinning.project"
+        :selected-id="selectedIds.project"
+        :disabled="!projectCategories.length"
+        spin-label="抽取项目方向"
+        @spin-request="handleSpin('project')"
+        @update:selectedId="selectedIds.project = $event"
+        @spin-end="handleSpinEnd('project', $event)"
       />
-      <stats-panel class="stats" :categories="categories" />
+      <turntable
+        class="turntable"
+        title="学习技能转盘"
+        center-label="学习"
+        :categories="learningCategories"
+        :spinning="spinning.learning"
+        :selected-id="selectedIds.learning"
+        :disabled="!learningCategories.length"
+        spin-label="抽取学习方向"
+        @spin-request="handleSpin('learning')"
+        @update:selectedId="selectedIds.learning = $event"
+        @spin-end="handleSpinEnd('learning', $event)"
+      />
     </div>
 
+    <stats-panel class="stats" :categories="categories" :current-ids="currentCategoryIds" />
+
     <category-list
-      :categories="categories"
-      :current-id="currentCategoryId"
+      :project-categories="projectCategories"
+      :learning-categories="learningCategories"
+      :current-ids="currentCategoryIds"
       @add="handleAddCategory"
       @detail="openResourceDialog"
       @remove="removeCategory"
@@ -50,62 +70,109 @@ export default {
   },
   data() {
     return {
-      spinning: false,
-      selectedId: null,
+      spinning: {
+        project: false,
+        learning: false
+      },
+      selectedIds: {
+        project: null,
+        learning: null
+      },
       resourceDialogVisible: false,
       activeCategory: null
     };
   },
   computed: {
-    ...mapGetters(['categoryList', 'currentCategoryId', 'currentCategory']),
+    ...mapGetters(['categoryList', 'currentCategoryIds']),
     categories() {
       // 统一出口，便于后续在本组件中添加额外计算
       return this.categoryList;
+    },
+    projectCategories() {
+      return this.categories.filter((item) => item.type === 'project');
+    },
+    learningCategories() {
+      return this.categories.filter((item) => item.type !== 'project');
     }
   },
   created() {
     this.initializeCategories();
   },
+  watch: {
+    projectCategories: {
+      handler(list) {
+        if (!list.some((item) => item.id === this.selectedIds.project)) {
+          this.selectedIds.project = null;
+        }
+      },
+      immediate: true
+    },
+    learningCategories: {
+      handler(list) {
+        if (!list.some((item) => item.id === this.selectedIds.learning)) {
+          this.selectedIds.learning = null;
+        }
+      },
+      immediate: true
+    }
+  },
   methods: {
     ...mapMutations(['addCategory', 'removeCategory', 'updateCategory']),
     ...mapActions(['initializeCategories', 'saveCategory', 'selectCategory']),
-    async handleSpin() {
-      if (!this.categories.length) {
-        this.$message.warning('请先添加学习方向');
+    handleSpin(type) {
+      if (this.spinning[type]) {
         return;
       }
-      // 先清空选中 id，等待转盘完成动画后再填充
-      this.spinning = true;
-      this.selectedId = null;
-      await this.$nextTick();
-      this.selectedId = this.randomCategory().id;
-    },
-    startSpin(categoryId) {
-      this.spinning = true;
-      this.selectedId = null;
+      const list = type === 'project' ? this.projectCategories : this.learningCategories;
+      if (!list.length) {
+        this.$message.warning('请先添加方向');
+        return;
+      }
+      this.spinning[type] = true;
+      this.selectedIds[type] = null;
       this.$nextTick(() => {
-        this.selectedId = categoryId;
+        const random = this.randomCategory(type);
+        if (random) {
+          this.selectedIds[type] = random.id;
+        }
       });
     },
-    handleSpinEnd(categoryId) {
-      const target = this.categories.find((item) => item.id === categoryId);
+    startSpin({ type, id }) {
+      if (this.spinning[type]) {
+        return;
+      }
+      this.spinning[type] = true;
+      this.selectedIds[type] = null;
+      this.$nextTick(() => {
+        this.selectedIds[type] = id;
+      });
+    },
+    handleSpinEnd(type, categoryId) {
+      const list = type === 'project' ? this.projectCategories : this.learningCategories;
+      const target = list.find((item) => item.id === categoryId);
       if (target) {
+        const typeLabel = type === 'project' ? '项目方向' : '学习方向';
         this.$notify({
           title: '抽取结果',
-          // 使用模板字符串展示结果
-          message: `本次学习方向：${target.label}`,
+          message: `本次${typeLabel}：${target.label}`,
           type: 'success'
         });
+        this.selectedIds[type] = categoryId;
       }
-      this.selectCategory(categoryId);
-      this.spinning = false;
+      this.selectCategory({ type, categoryId });
+      this.spinning[type] = false;
     },
-    randomCategory() {
-      const index = Math.floor(Math.random() * this.categories.length);
-      return this.categories[index];
+    randomCategory(type) {
+      const list = type === 'project' ? this.projectCategories : this.learningCategories;
+      if (!list.length) {
+        return null;
+      }
+      const index = Math.floor(Math.random() * list.length);
+      return list[index];
     },
-    handleAddCategory() {
-      this.$prompt('请输入新增学习方向的名称', '新增方向', {
+    handleAddCategory(type) {
+      const targetType = type || 'learning';
+      this.$prompt('请输入新增方向的名称', '新增方向', {
         confirmButtonText: '确定',
         cancelButtonText: '取消'
       })
@@ -119,6 +186,7 @@ export default {
             label: value,
             description: '请在详情中补充简介与资源',
             selected: false,
+            type: targetType,
             resources: []
           };
           this.addCategory(newCategory);
@@ -132,11 +200,15 @@ export default {
       this.resourceDialogVisible = true;
     },
     async saveCategoryResources(payload) {
-      this.updateCategory(payload);
-      await this.saveCategory(payload);
+      const normalized = {
+        ...payload,
+        type: payload.type || 'learning'
+      };
+      this.updateCategory(normalized);
+      await this.saveCategory(normalized);
       this.$message.success('已保存学习资源');
-      if (payload.selected) {
-        this.selectCategory(payload.id);
+      if (normalized.selected) {
+        this.selectCategory({ type: normalized.type, categoryId: normalized.id });
       }
     }
   }
@@ -163,6 +235,7 @@ export default {
   @media (min-width: 992px) {
     flex-direction: row;
     align-items: flex-start;
+    justify-content: center;
     gap: 32px;
   }
 }
@@ -172,8 +245,8 @@ export default {
 }
 
 .stats {
-  flex: 1;
   width: 100%;
+  margin-bottom: 32px;
 }
 </style>
 

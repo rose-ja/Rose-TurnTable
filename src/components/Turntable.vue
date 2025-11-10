@@ -1,6 +1,22 @@
 <template>
   <div class="turntable-wrapper">
-    <div class="wheel-container">
+    <div class="wheel-header">
+      <div class="wheel-title">
+        <span>{{ title }}</span>
+        <small v-if="subtitle">{{ subtitle }}</small>
+      </div>
+      <el-button
+        type="primary"
+        size="mini"
+        round
+        :disabled="disabled || !categories.length || isSpinning"
+        :loading="isSpinning"
+        @click="$emit('spin-request')"
+      >
+        {{ spinLabel }}
+      </el-button>
+    </div>
+    <div class="wheel-container" :class="{ 'is-empty': !categories.length }">
       <div
         class="wheel"
         ref="wheel"
@@ -8,11 +24,14 @@
         :class="{ spinning: isSpinning }"
         @transitionend="handleTransitionEnd"
       >
-        <div class="wheel-label" v-for="segment in segments" :key="segment.id" :style="segment.labelStyle">
-          <span>{{ segment.label }}</span>
-        </div>
+        <template v-if="categories.length">
+          <div class="wheel-label" v-for="segment in segments" :key="segment.id" :style="segment.labelStyle">
+            <span :style="segment.badgeStyle">{{ segment.label }}</span>
+          </div>
+        </template>
+        <div v-else class="wheel-placeholder">暂无数据</div>
         <div class="wheel-center">
-          <span>学习</span>
+          <span>{{ centerLabel }}</span>
         </div>
       </div>
       <div class="pointer">
@@ -60,6 +79,14 @@ const mixColor = (hex, amount) => {
 export default {
   name: 'Turntable',
   props: {
+    title: {
+      type: String,
+      default: '学习转盘'
+    },
+    subtitle: {
+      type: String,
+      default: ''
+    },
     categories: {
       type: Array,
       default: () => []
@@ -68,9 +95,21 @@ export default {
       type: Boolean,
       default: false
     },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
     selectedId: {
       type: String,
       default: null
+    },
+    centerLabel: {
+      type: String,
+      default: '学习'
+    },
+    spinLabel: {
+      type: String,
+      default: '点击开始'
     }
   },
   data() {
@@ -94,13 +133,23 @@ export default {
         const highlight = mixColor(baseColor, 0.35);
         const shadow = mixColor(baseColor, -0.25);
         const labelRotate = -(start + this.segmentAngle / 2);
+        const badgeBackground = `linear-gradient(140deg, ${mixColor(baseColor, -0.15)}, ${mixColor(baseColor, 0.35)})`;
+        const textColor = '#ffffff';
+        const borderColor = mixColor(baseColor, 0.5);
         return {
           ...category,
           baseColor,
           highlight,
           shadow,
           labelStyle: {
-            transform: `rotate(${labelRotate}deg)`
+            transform: `rotate(${labelRotate}deg)`,
+            '--segment-color': baseColor
+          },
+          badgeStyle: {
+            background: badgeBackground,
+            color: textColor,
+            boxShadow: `0 10px 24px ${mixColor(shadow, 0.35)}66`,
+            borderColor
           }
         };
       });
@@ -117,11 +166,29 @@ export default {
           return `${segment.highlight} ${startDeg}deg ${midDeg}deg, ${segment.shadow} ${midDeg}deg ${endDeg}deg`;
         })
         .join(', ');
+      const separatorWidth = Math.max(this.segmentAngle * 0.04, 1.5);
+      const separators = this.segments.length
+        ? `repeating-conic-gradient(from -90deg, transparent 0deg ${Math.max(
+            this.segmentAngle - separatorWidth,
+            0
+          )}deg, rgba(255, 255, 255, 0.55) ${Math.max(
+            this.segmentAngle - separatorWidth,
+            0
+          )}deg ${this.segmentAngle}deg)`
+        : null;
+      const highlightOverlay = `radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.45), transparent 60%)`;
+
+      const baseGradient = this.segments.length
+        ? `conic-gradient(from -90deg, ${gradient})`
+        : 'radial-gradient(circle at center, #dfe7ff, #a8bbff)';
+
+      const backgroundImage = this.segments.length
+        ? [highlightOverlay, separators, baseGradient].filter(Boolean).join(', ')
+        : baseGradient;
 
       return {
-        backgroundImage: this.segments.length
-          ? `conic-gradient(from -90deg, ${gradient})`
-          : 'radial-gradient(circle at center, #dfe7ff, #a8bbff)',
+        backgroundImage,
+        backgroundBlendMode: this.segments.length ? 'screen, normal, normal' : undefined,
         transform: `translate(-50%, -50%) rotate(${this.rotation}deg)`,
         transitionDuration: `${this.isSpinning ? this.spinDuration : 0}ms`
       };
@@ -177,18 +244,49 @@ export default {
 <style lang="less" scoped>
 .turntable-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding: 12px;
+  gap: 16px;
+  padding: 20px;
+}
+
+.wheel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 440px;
+  padding: 0 12px;
+
+  .wheel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 18px;
+    color: #303133;
+
+    small {
+      font-size: 12px;
+      font-weight: 500;
+      color: #909399;
+    }
+  }
 }
 
 .wheel-container {
   position: relative;
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.85), rgba(210, 225, 255, 0.55));
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(210, 225, 255, 0.45));
   border-radius: 50%;
-  box-shadow: 0 25px 50px rgba(31, 56, 88, 0.2);
+  box-shadow:
+    0 32px 60px rgba(31, 56, 88, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.wheel-container.is-empty {
+  background: linear-gradient(145deg, #f6f8ff, #ffffff);
 }
 
 .wheel {
@@ -198,10 +296,10 @@ export default {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 16px solid rgba(255, 255, 255, 0.95);
+  border: 18px solid rgba(255, 255, 255, 0.9);
   box-shadow:
-    inset 0 0 20px rgba(255, 255, 255, 0.9),
-    0 18px 40px rgba(31, 56, 88, 0.25);
+    inset 0 0 24px rgba(255, 255, 255, 0.9),
+    0 24px 54px rgba(31, 56, 88, 0.28);
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.24, 0.78, 0.4, 0.96);
   display: flex;
@@ -228,19 +326,41 @@ export default {
   top: 50%;
   left: 50%;
   transform-origin: 0 0;
-  width: 48%;
+  width: 52%;
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.95);
   pointer-events: none;
 
   span {
     display: inline-block;
-    width: 100%;
-    transform: translateY(-140px);
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    max-width: 180px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    transform: translateY(-162px);
+    backdrop-filter: blur(2px);
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    font-weight: 700;
+    transition: transform 0.3s ease;
+    box-shadow:
+      inset 0 0 12px rgba(255, 255, 255, 0.45),
+      0 8px 16px rgba(0, 0, 0, 0.12);
+    filter: saturate(1.1);
   }
+}
+
+.wheel-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #909399;
+  font-weight: 600;
+  letter-spacing: 1px;
+  pointer-events: none;
 }
 
 .wheel-center {
@@ -262,11 +382,11 @@ export default {
 
 .pointer {
   position: absolute;
-  top: -24px;
+  top: -30px;
   left: 50%;
   transform: translateX(-50%);
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 54px;
   z-index: 10;
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 export const mockCategories = [
   {
     id: 'project-scaffold',
+    type: 'project',
     label: '脚手架开发',
     description: '搭建脚手架模板，提升项目初始化效率',
     selected: false,
@@ -11,6 +12,7 @@ export const mockCategories = [
   },
   {
     id: 'component-lib',
+    type: 'project',
     label: '组件库开发',
     description: '从零搭建可复用组件库体系',
     selected: false,
@@ -21,6 +23,7 @@ export const mockCategories = [
   },
   {
     id: 'data-visualization',
+    type: 'project',
     label: '数据大屏',
     description: '构建数据可视化大屏项目',
     selected: false,
@@ -31,6 +34,7 @@ export const mockCategories = [
   },
   {
     id: 'admin-system',
+    type: 'project',
     label: '后台管理系统',
     description: '掌握后台管理常用功能模块',
     selected: false,
@@ -41,6 +45,7 @@ export const mockCategories = [
   },
   {
     id: 'monitoring',
+    type: 'project',
     label: '前端监控平台',
     description: '搭建前端质量与性能监控体系',
     selected: false,
@@ -51,6 +56,7 @@ export const mockCategories = [
   },
   {
     id: 'vue-source',
+    type: 'learning',
     label: 'Vue 源码解析',
     description: '深入理解 Vue2/Vue3 运行机制',
     selected: false,
@@ -61,6 +67,7 @@ export const mockCategories = [
   },
   {
     id: 'build-tools',
+    type: 'learning',
     label: '打包工具与 Git',
     description: '掌握 Webpack、Vite 与 Git',
     selected: false,
@@ -72,6 +79,7 @@ export const mockCategories = [
   },
   {
     id: 'performance',
+    type: 'learning',
     label: '性能优化与调试',
     description: '提升性能与调试能力',
     selected: false,
@@ -82,6 +90,7 @@ export const mockCategories = [
   },
   {
     id: 'tooling',
+    type: 'learning',
     label: '开发工具拓展',
     description: 'TypeScript、Node.js、小程序等',
     selected: false,
@@ -89,6 +98,42 @@ export const mockCategories = [
       { id: 'typescript', title: 'TypeScript 官方手册', link: 'https://www.typescriptlang.org/zh/docs/', completed: false },
       { id: 'nodejs', title: 'Node.js 入门', link: 'https://nodejs.dev/en/learn/', completed: false },
       { id: 'mini-program', title: '微信小程序开发指南', link: 'https://developers.weixin.qq.com/miniprogram/dev/framework/', completed: false }
+    ]
+  },
+  {
+    id: 'automation-testing',
+    type: 'learning',
+    label: 'Cypress/Vitest 自动化测试',
+    description: '构建端到端与单元测试自动化体系',
+    selected: false,
+    resources: [
+      { id: 'cypress-doc', title: 'Cypress 官方文档', link: 'https://docs.cypress.io/', completed: false },
+      { id: 'vitest-doc', title: 'Vitest 指南', link: 'https://cn.vitest.dev/guide/', completed: false },
+      { id: 'testing-strategy', title: '前端测试策略实践', link: 'https://testingjavascript.com/', completed: false }
+    ]
+  },
+  {
+    id: 'design-collaboration',
+    type: 'learning',
+    label: 'Figma 与 Cursor MCP',
+    description: '提升设计协作与 AI 辅助开发效率',
+    selected: false,
+    resources: [
+      { id: 'figma-guide', title: 'Figma 设计系统指南', link: 'https://help.figma.com/hc/zh-cn', completed: false },
+      { id: 'cursor-mcp', title: 'Cursor MCP 集成文档', link: 'https://docs.cursor.com/mcp', completed: false },
+      { id: 'ai-collaboration', title: 'AI 辅助协同最佳实践', link: 'https://www.figma.com/community/file/1234567890-ai-design-workflow', completed: false }
+    ]
+  },
+  {
+    id: 'cdn-cache',
+    type: 'learning',
+    label: 'CDN 图片缓存',
+    description: '掌握静态资源加速与缓存策略',
+    selected: false,
+    resources: [
+      { id: 'cdn-best-practice', title: 'CDN 最佳实践', link: 'https://developer.fastly.com/solutions/examples/caching/', completed: false },
+      { id: 'image-optimization', title: '图片优化与缓存策略', link: 'https://web.dev/image-cdns/', completed: false },
+      { id: 'cloudflare-images', title: 'Cloudflare Images 教程', link: 'https://developers.cloudflare.com/images/', completed: false }
     ]
   }
 ];
