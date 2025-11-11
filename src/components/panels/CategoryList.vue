@@ -13,7 +13,7 @@
         :data="projectCategories"
         border
         empty-text="暂无项目方向"
-        :row-class-name="(args) => rowClassName(args, 'project')"
+        :row-class-name="args => rowClassName(args, 'project')"
       >
         <el-table-column prop="label" label="名称" />
         <el-table-column prop="description" label="简介" show-overflow-tooltip />
@@ -40,7 +40,7 @@
         :data="learningCategories"
         border
         empty-text="暂无学习方向"
-        :row-class-name="(args) => rowClassName(args, 'learning')"
+        :row-class-name="args => rowClassName(args, 'learning')"
       >
         <el-table-column prop="label" label="名称" />
         <el-table-column prop="description" label="简介" show-overflow-tooltip />
@@ -66,23 +66,23 @@ export default {
   props: {
     projectCategories: {
       type: Array,
-      default: () => []
+      default: () => [],
     },
     learningCategories: {
       type: Array,
-      default: () => []
+      default: () => [],
     },
     currentIds: {
       type: Object,
-      default: () => ({})
-    }
+      default: () => ({}),
+    },
   },
   methods: {
     rowClassName({ row }, type) {
       // 用绿色背景强调当前正在学习的方向
       return row.id === this.currentIds?.[type] ? 'is-selected-row' : '';
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -122,4 +122,3 @@ export default {
   }
 }
 </style>
-

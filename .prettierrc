@@ -1,0 +1,14 @@
+{
+  "useTabs": false,
+  "tabWidth": 2,
+  "endOfLine": "lf",
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "jsxSingleQuote": true,
+  "printWidth": 120,
+  "htmlWhitespaceSensitivity": "css",
+  "vueIndentScriptAndStyle": false,
+  "arrowParens": "avoid"
+}
+

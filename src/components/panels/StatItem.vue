@@ -17,17 +17,17 @@ export default {
   props: {
     label: {
       type: String,
-      required: true
+      required: true,
     },
     value: {
       type: [String, Number],
-      default: 0
+      default: 0,
     },
     icon: {
       type: String,
-      default: ''
-    }
-  }
+      default: '',
+    },
+  },
 };
 </script>
 
@@ -75,4 +75,3 @@ export default {
   }
 }
 </style>
-

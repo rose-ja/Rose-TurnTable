@@ -16,7 +16,7 @@ export const loadState = () => {
   }
 };
 
-export const localStoragePlugin = (store) => {
+export const localStoragePlugin = store => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -24,7 +24,7 @@ export const localStoragePlugin = (store) => {
     try {
       const serialized = JSON.stringify({
         categories: state.categories,
-        currentCategoryIds: state.currentCategoryIds
+        currentCategoryIds: state.currentCategoryIds,
       });
       window.localStorage.setItem(STORAGE_KEY, serialized);
     } catch (error) {
@@ -32,4 +32,3 @@ export const localStoragePlugin = (store) => {
     }
   });
 };
-

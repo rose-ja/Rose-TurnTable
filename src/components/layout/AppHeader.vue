@@ -10,7 +10,7 @@
 <script>
 // 页面顶部简介及触发按钮
 export default {
-  name: 'AppHeader'
+  name: 'AppHeader',
 };
 </script>
 
@@ -35,4 +35,3 @@ export default {
   }
 }
 </style>
-

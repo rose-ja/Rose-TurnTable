@@ -46,7 +46,9 @@
     <resource-dialog
       :visible.sync="resourceDialogVisible"
       :category="activeCategory"
+      :completion-labels="completionLabels"
       @save="saveCategoryResources"
+      @completion-change="handleCompletionChange"
     />
   </div>
 </template>
@@ -66,59 +68,69 @@ export default {
     Turntable,
     StatsPanel,
     CategoryList,
-    ResourceDialog
+    ResourceDialog,
   },
   data() {
     return {
+      // 转盘旋转状态
       spinning: {
-        project: false,
-        learning: false
+        project: false, // 项目转盘是否在旋转
+        learning: false, // 学习转盘是否在旋转
       },
+      // 当前选中的分类 ID
       selectedIds: {
-        project: null,
-        learning: null
+        project: null, // 项目类选中的分类 ID
+        learning: null, // 学习类选中的分类 ID
       },
-      resourceDialogVisible: false,
-      activeCategory: null
+      resourceDialogVisible: false, // 资源对话框显示状态
+      activeCategory: null, // 当前激活的分类（用于编辑）
+      // 完成度标签配置（可自定义）
+      completionLabels: {
+        uncompleted: '未完成',
+        completed: '已完成',
+      },
     };
   },
   computed: {
     ...mapGetters(['categoryList', 'currentCategoryIds']),
+    // 所有分类列表
     categories() {
-      // 统一出口，便于后续在本组件中添加额外计算
       return this.categoryList;
     },
+    // 项目类分类列表
     projectCategories() {
-      return this.categories.filter((item) => item.type === 'project');
+      return this.categories.filter(item => item.type === 'project');
     },
+    // 学习类分类列表
     learningCategories() {
-      return this.categories.filter((item) => item.type !== 'project');
-    }
+      return this.categories.filter(item => item.type !== 'project');
+    },
   },
   created() {
+    // 初始化分类数据
     this.initializeCategories();
   },
   watch: {
     projectCategories: {
       handler(list) {
-        if (!list.some((item) => item.id === this.selectedIds.project)) {
+        if (!list.some(item => item.id === this.selectedIds.project)) {
           this.selectedIds.project = null;
         }
       },
-      immediate: true
+      immediate: true,
     },
     learningCategories: {
       handler(list) {
-        if (!list.some((item) => item.id === this.selectedIds.learning)) {
+        if (!list.some(item => item.id === this.selectedIds.learning)) {
           this.selectedIds.learning = null;
         }
       },
-      immediate: true
-    }
+      immediate: true,
+    },
   },
   methods: {
-    ...mapMutations(['addCategory', 'removeCategory', 'updateCategory']),
-    ...mapActions(['initializeCategories', 'saveCategory', 'selectCategory']),
+    ...mapMutations(['addCategory', 'updateCategory']),
+    ...mapActions(['initializeCategories', 'saveCategory', 'selectCategory', 'deleteCategory']),
     handleSpin(type) {
       if (this.spinning[type]) {
         return;
@@ -149,13 +161,13 @@ export default {
     },
     handleSpinEnd(type, categoryId) {
       const list = type === 'project' ? this.projectCategories : this.learningCategories;
-      const target = list.find((item) => item.id === categoryId);
+      const target = list.find(item => item.id === categoryId);
       if (target) {
         const typeLabel = type === 'project' ? '项目方向' : '学习方向';
         this.$notify({
           title: '抽取结果',
           message: `本次${typeLabel}：${target.label}`,
-          type: 'success'
+          type: 'success',
         });
         this.selectedIds[type] = categoryId;
       }
@@ -174,7 +186,7 @@ export default {
       const targetType = type || 'learning';
       this.$prompt('请输入新增方向的名称', '新增方向', {
         confirmButtonText: '确定',
-        cancelButtonText: '取消'
+        cancelButtonText: '取消',
       })
         .then(({ value }) => {
           if (!value) {
@@ -187,10 +199,11 @@ export default {
             description: '请在详情中补充简介与资源',
             selected: false,
             type: targetType,
-            resources: []
+            resources: [],
           };
+          // 先添加到本地状态，显示对话框
           this.addCategory(newCategory);
-          this.activeCategory = newCategory;
+          this.activeCategory = { ...newCategory };
           this.resourceDialogVisible = true;
         })
         .catch(() => {});
@@ -200,18 +213,52 @@ export default {
       this.resourceDialogVisible = true;
     },
     async saveCategoryResources(payload) {
-      const normalized = {
-        ...payload,
-        type: payload.type || 'learning'
-      };
-      this.updateCategory(normalized);
-      await this.saveCategory(normalized);
-      this.$message.success('已保存学习资源');
-      if (normalized.selected) {
-        this.selectCategory({ type: normalized.type, categoryId: normalized.id });
+      try {
+        const normalized = {
+          ...payload,
+          type: payload.type || 'learning',
+        };
+        // 保存分类，可能会返回新的 ID（如果是从临时 ID 变为 UUID）
+        const savedCategory = await this.saveCategory(normalized);
+
+        // 更新 activeCategory 的 ID（如果 ID 发生了变化）
+        if (savedCategory && savedCategory.id !== normalized.id) {
+          this.activeCategory = { ...this.activeCategory, ...savedCategory };
+        }
+
+        this.$message.success('已保存学习资源');
+
+        // 使用保存后的 ID（可能是新的 UUID）
+        const finalId = savedCategory?.id || normalized.id;
+        if (normalized.selected && finalId) {
+          await this.selectCategory({ type: normalized.type, categoryId: finalId });
+        }
+      } catch (error) {
+        console.error('Failed to save category:', error);
+        this.$message.error('保存失败，请检查网络连接');
       }
-    }
-  }
+    },
+    async removeCategory(categoryId) {
+      try {
+        await this.deleteCategory(categoryId);
+        this.$message.success('已删除分类');
+      } catch (error) {
+        console.error('Failed to delete category:', error);
+        this.$message.error('删除失败，请检查网络连接');
+      }
+    },
+    /**
+     * 处理完成度状态变更
+     * @param {Object} payload - 包含 resource 和 completed 的对象
+     */
+    handleCompletionChange(payload) {
+      const { resource, completed } = payload;
+      // 这里可以添加自定义逻辑，比如自动保存、统计等
+      console.log('完成度变更:', resource.title, completed ? '已完成' : '未完成');
+      // 如果需要自动保存，可以在这里调用保存方法
+      // this.saveCategoryResources({ ...this.activeCategory });
+    },
+  },
 };
 </script>
 
@@ -249,4 +296,3 @@ export default {
   margin-bottom: 32px;
 }
 </style>
-

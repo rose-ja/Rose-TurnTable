@@ -54,10 +54,10 @@ const palette = [
   '#FF9C6E',
   '#5C7CFA',
   '#13C2C2',
-  '#F759AB'
+  '#F759AB',
 ];
 
-const clampChannel = (value) => Math.max(0, Math.min(255, value));
+const clampChannel = value => Math.max(0, Math.min(255, value));
 
 const mixColor = (hex, amount) => {
   const normalized = hex.replace('#', '');
@@ -65,14 +65,13 @@ const mixColor = (hex, amount) => {
   const r = (num >> 16) & 0xff;
   const g = (num >> 8) & 0xff;
   const b = num & 0xff;
-  const adjust = (channel) =>
-    amount >= 0
-      ? clampChannel(channel + (255 - channel) * amount)
-      : clampChannel(channel * (1 + amount));
+  const adjust = channel => {
+    return amount >= 0 ? clampChannel(channel + (255 - channel) * amount) : clampChannel(channel * (1 + amount));
+  };
   const nr = adjust(r);
   const ng = adjust(g);
   const nb = adjust(b);
-  const toHex = (channel) => channel.toString(16).padStart(2, '0');
+  const toHex = channel => channel.toString(16).padStart(2, '0');
   return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
 };
 
@@ -81,58 +80,76 @@ export default {
   props: {
     title: {
       type: String,
-      default: '学习转盘'
+      default: '学习转盘',
     },
     subtitle: {
       type: String,
-      default: ''
+      default: '',
     },
     categories: {
       type: Array,
-      default: () => []
+      default: () => [],
     },
     spinning: {
       type: Boolean,
-      default: false
+      default: false,
     },
     disabled: {
       type: Boolean,
-      default: false
+      default: false,
     },
     selectedId: {
       type: String,
-      default: null
+      default: null,
     },
     centerLabel: {
       type: String,
-      default: '学习'
+      default: '学习',
     },
     spinLabel: {
       type: String,
-      default: '点击开始'
-    }
+      default: '点击开始',
+    },
   },
   data() {
     return {
-      rotation: 0,
-      isSpinning: false,
-      spinDuration: 4000
+      rotation: 0, // 转盘旋转角度
+      isSpinning: false, // 是否正在旋转
+      spinDuration: 4000, // 旋转动画持续时间（毫秒）
     };
   },
   computed: {
+    /**
+     * 计算每个扇区的角度
+     * @returns {number} 扇区角度（度）
+     */
     segmentAngle() {
-      if (!this.categories.length) {
+      if (!this.categories || !this.categories.length) {
         return 0;
       }
       return 360 / this.categories.length;
     },
+    /**
+     * 计算转盘扇区数据
+     * 为每个分类生成颜色、样式等信息
+     * @returns {Array} 扇区数据数组
+     */
     segments() {
+      // 确保 categories 存在且是数组
+      if (!this.categories || !Array.isArray(this.categories) || this.categories.length === 0) {
+        return [];
+      }
       return this.categories.map((category, index) => {
+        // 计算扇区起始角度
         const start = this.segmentAngle * index;
+        // 从调色板获取基础颜色
         const baseColor = `${palette[index % palette.length]}`;
+        // 计算高光和阴影颜色
         const highlight = mixColor(baseColor, 0.35);
         const shadow = mixColor(baseColor, -0.25);
+        // 计算标签旋转角度（使标签文字水平显示）
         const labelRotate = -(start + this.segmentAngle / 2);
+        // 生成标签背景渐变
         const badgeBackground = `linear-gradient(140deg, ${mixColor(baseColor, -0.15)}, ${mixColor(baseColor, 0.35)})`;
         const textColor = '#ffffff';
         const borderColor = mixColor(baseColor, 0.5);
@@ -143,56 +160,99 @@ export default {
           shadow,
           labelStyle: {
             transform: `rotate(${labelRotate}deg)`,
-            '--segment-color': baseColor
+            '--segment-color': baseColor,
           },
           badgeStyle: {
             background: badgeBackground,
             color: textColor,
             boxShadow: `0 10px 24px ${mixColor(shadow, 0.35)}66`,
-            borderColor
-          }
+            borderColor,
+          },
         };
       });
     },
+    /**
+     * 转盘样式计算属性
+     * 确保始终返回有效的背景样式，避免背景消失
+     * 关键：即使数据加载过程中 categories 为空，也返回默认背景，避免透明
+     */
     wheelStyle() {
-      const gradient = this.segments
-        .map((segment, index) => {
-          const startDeg = this.segmentAngle * index;
-          const midDeg = startDeg + this.segmentAngle / 2;
-          const endDeg =
-            index === this.segments.length - 1 && this.segments.length > 1
-              ? 360
-              : this.segmentAngle * (index + 1);
-          return `${segment.highlight} ${startDeg}deg ${midDeg}deg, ${segment.shadow} ${midDeg}deg ${endDeg}deg`;
-        })
-        .join(', ');
-      const separatorWidth = Math.max(this.segmentAngle * 0.04, 1.5);
-      const separators = this.segments.length
-        ? `repeating-conic-gradient(from -90deg, transparent 0deg ${Math.max(
-            this.segmentAngle - separatorWidth,
-            0
-          )}deg, rgba(255, 255, 255, 0.55) ${Math.max(
-            this.segmentAngle - separatorWidth,
-            0
-          )}deg ${this.segmentAngle}deg)`
-        : null;
-      const highlightOverlay = `radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.45), transparent 60%)`;
+      // 默认背景色（蓝色渐变），确保即使数据加载时也有背景
+      const defaultBackground = 'radial-gradient(circle at center, #dfe7ff, #a8bbff)';
 
-      const baseGradient = this.segments.length
-        ? `conic-gradient(from -90deg, ${gradient})`
-        : 'radial-gradient(circle at center, #dfe7ff, #a8bbff)';
-
-      const backgroundImage = this.segments.length
-        ? [highlightOverlay, separators, baseGradient].filter(Boolean).join(', ')
-        : baseGradient;
-
-      return {
-        backgroundImage,
-        backgroundBlendMode: this.segments.length ? 'screen, normal, normal' : undefined,
+      // 基础样式对象，确保背景始终存在
+      const baseStyle = {
+        backgroundColor: '#dfe7ff', // 备用背景色，确保背景始终可见
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         transform: `translate(-50%, -50%) rotate(${this.rotation}deg)`,
-        transitionDuration: `${this.isSpinning ? this.spinDuration : 0}ms`
+        transitionDuration: `${this.isSpinning ? this.spinDuration : 0}ms`,
       };
-    }
+
+      // 如果没有分类数据，使用默认背景
+      if (
+        !this.categories ||
+        !Array.isArray(this.categories) ||
+        !this.categories.length ||
+        !this.segments ||
+        !Array.isArray(this.segments) ||
+        !this.segments.length
+      ) {
+        return {
+          ...baseStyle,
+          backgroundImage: defaultBackground,
+          backgroundBlendMode: 'normal',
+        };
+      }
+
+      try {
+        // 计算每个扇区的渐变
+        const gradient = this.segments
+          .map((segment, index) => {
+            const startDeg = this.segmentAngle * index;
+            const midDeg = startDeg + this.segmentAngle / 2;
+            const endDeg =
+              index === this.segments.length - 1 && this.segments.length > 1 ? 360 : this.segmentAngle * (index + 1);
+            return `${segment.highlight} ${startDeg}deg ${midDeg}deg, ${segment.shadow} ${midDeg}deg ${endDeg}deg`;
+          })
+          .join(', ');
+
+        // 计算分隔线宽度
+        const separatorWidth = Math.max(this.segmentAngle * 0.04, 1.5);
+
+        // 创建分隔线渐变
+        const separators = `repeating-conic-gradient(from -90deg, transparent 0deg ${Math.max(
+          this.segmentAngle - separatorWidth,
+          0
+        )}deg, rgba(255, 255, 255, 0.55) ${Math.max(this.segmentAngle - separatorWidth, 0)}deg ${
+          this.segmentAngle
+        }deg)`;
+
+        // 高光叠加层
+        const highlightOverlay = `radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.45), transparent 60%)`;
+
+        // 基础渐变（圆锥渐变）
+        const baseGradient = `conic-gradient(from -90deg, ${gradient})`;
+
+        // 组合所有背景层
+        const backgroundImage = [highlightOverlay, separators, baseGradient].join(', ');
+
+        return {
+          ...baseStyle,
+          backgroundImage,
+          backgroundBlendMode: 'screen, normal, normal',
+        };
+      } catch (error) {
+        // 如果计算失败，使用默认背景
+        console.warn('转盘样式计算失败，使用默认背景:', error);
+        return {
+          ...baseStyle,
+          backgroundImage: defaultBackground,
+          backgroundBlendMode: 'normal',
+        };
+      }
+    },
   },
   watch: {
     selectedId: {
@@ -203,20 +263,21 @@ export default {
         }
         // 当外部更新选中方向时，触发转盘旋转到对应扇区
         this.spinToCategory(newVal);
-      }
-    }
+      },
+    },
   },
   methods: {
     /**
      * 让转盘旋转到目标方向
-     * @param {string} categoryId 目标方向 id
+     * @param {string} categoryId - 目标方向 ID
      */
     spinToCategory(categoryId) {
-      const index = this.categories.findIndex((item) => item.id === categoryId);
+      const index = this.categories.findIndex(item => item.id === categoryId);
       if (index === -1) {
         return;
       }
-      const baseRotation = 360 * (5 + Math.floor(Math.random() * 3));
+      // 计算旋转角度：多圈旋转 + 目标扇区角度
+      const baseRotation = 360 * (5 + Math.floor(Math.random() * 3)); // 5-7 圈
       const finalRotation = baseRotation + index * this.segmentAngle + this.segmentAngle / 2;
       this.isSpinning = false;
       this.$nextTick(() => {
@@ -229,6 +290,10 @@ export default {
         this.$emit('update:selectedId', categoryId);
       });
     },
+    /**
+     * 处理转盘旋转动画结束事件
+     * @param {Event} event - 过渡结束事件
+     */
     handleTransitionEnd(event) {
       if (event.target !== event.currentTarget || !this.isSpinning) {
         return;
@@ -236,8 +301,8 @@ export default {
       // 动画完成后向父组件抛出最终结果
       this.isSpinning = false;
       this.$emit('spin-end', this.selectedId);
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -280,9 +345,7 @@ export default {
   height: 420px;
   background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9), rgba(210, 225, 255, 0.45));
   border-radius: 50%;
-  box-shadow:
-    0 32px 60px rgba(31, 56, 88, 0.22),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 32px 60px rgba(31, 56, 88, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
 }
 
 .wheel-container.is-empty {
@@ -297,9 +360,7 @@ export default {
   height: 100%;
   border-radius: 50%;
   border: 18px solid rgba(255, 255, 255, 0.9);
-  box-shadow:
-    inset 0 0 24px rgba(255, 255, 255, 0.9),
-    0 24px 54px rgba(31, 56, 88, 0.28);
+  box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.9), 0 24px 54px rgba(31, 56, 88, 0.28);
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.24, 0.78, 0.4, 0.96);
   display: flex;
@@ -307,6 +368,16 @@ export default {
   align-items: center;
   position: relative;
   overflow: hidden;
+  /* 
+   * 关键：设置默认背景色和背景图，确保即使内联样式未加载时也有背景
+   * 这可以防止在数据加载过程中背景消失
+   * 注意：内联样式（:style）会覆盖这些样式，但这里作为备用保障
+   */
+  background-color: #dfe7ff;
+  background-image: radial-gradient(circle at center, #dfe7ff, #a8bbff);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
   &::before {
     content: '';
@@ -318,6 +389,7 @@ export default {
     left: -10%;
     background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.25), transparent 60%);
     pointer-events: none;
+    z-index: 1;
   }
 }
 
@@ -345,9 +417,7 @@ export default {
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     font-weight: 700;
     transition: transform 0.3s ease;
-    box-shadow:
-      inset 0 0 12px rgba(255, 255, 255, 0.45),
-      0 8px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.45), 0 8px 16px rgba(0, 0, 0, 0.12);
     filter: saturate(1.1);
   }
 }
@@ -393,9 +463,7 @@ export default {
   justify-content: center;
   background: linear-gradient(135deg, #ff7a45, #ffbb66);
   border-radius: 50%;
-  box-shadow:
-    0 10px 20px rgba(255, 122, 69, 0.4),
-    inset 0 6px 10px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 10px 20px rgba(255, 122, 69, 0.4), inset 0 6px 10px rgba(255, 255, 255, 0.45);
 
   &::after {
     content: '';
@@ -422,4 +490,3 @@ export default {
   }
 }
 </style>
-
